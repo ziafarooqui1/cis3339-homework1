@@ -9,8 +9,10 @@ app.use(express.json());
 
 const DATA_FILE = path.join(__dirname, 'students.json');
 const COURSES_FILE = path.join(__dirname, 'courses.json');
+const ENROLLMENTS_FILE = path.join(__dirname, 'enrollments.json');
 let studentMutationQueue = Promise.resolve();
 let courseMutationQueue = Promise.resolve();
+let enrollmentMutationQueue = Promise.resolve();
 
 function queueMutation(queueGetter, queueSetter, mutation) {
     const result = queueGetter().then(mutation);
@@ -30,6 +32,14 @@ function queueCourseMutation(mutation) {
     return queueMutation(
         () => courseMutationQueue,
         (queue) => { courseMutationQueue = queue; },
+        mutation
+    );
+}
+
+function queueEnrollmentMutation(mutation) {
+    return queueMutation(
+        () => enrollmentMutationQueue,
+        (queue) => { enrollmentMutationQueue = queue; },
         mutation
     );
 }
@@ -58,6 +68,17 @@ const loadStudents = () => loadJsonArray(DATA_FILE, 'Student');
 const saveStudents = (students) => saveJsonArray(DATA_FILE, students);
 const loadCourses = () => loadJsonArray(COURSES_FILE, 'Course');
 const saveCourses = (courses) => saveJsonArray(COURSES_FILE, courses);
+const loadEnrollments = () => loadJsonArray(ENROLLMENTS_FILE, 'Enrollment');
+const saveEnrollments = (enrollments) => saveJsonArray(ENROLLMENTS_FILE, enrollments);
+
+app.get('/students', async (req, res) => {
+    try {
+        res.send(await loadStudents());
+    } catch (error) {
+        console.error('Error listing students:', error);
+        res.status(500).send({ error: 'Internal server error' });
+    }
+});
 
 app.post('/find-student', async (req, res) => {
     try {
@@ -136,6 +157,10 @@ app.post('/delete-student', async (req, res) => {
 
             const deletedStudent = students.splice(index, 1)[0];
             await saveStudents(students);
+            const enrollments = await loadEnrollments();
+            await saveEnrollments(enrollments.filter((enrollment) =>
+                String(enrollment.studentId).trim() !== String(deletedStudent.id).trim()
+            ));
             return {
                 status: 200,
                 body: { message: 'Student deleted successfully', student: deletedStudent }
@@ -214,6 +239,10 @@ app.post('/delete-course', async (req, res) => {
 
             const deletedCourse = courses.splice(index, 1)[0];
             await saveCourses(courses);
+            const enrollments = await loadEnrollments();
+            await saveEnrollments(enrollments.filter((enrollment) =>
+                String(enrollment.courseId).trim() !== String(deletedCourse.courseId).trim()
+            ));
             return {
                 status: 200,
                 body: { message: 'Course deleted successfully', course: deletedCourse }
@@ -222,6 +251,76 @@ app.post('/delete-course', async (req, res) => {
         res.status(result.status).send(result.body);
     } catch (error) {
         console.error('Error deleting course:', error);
+        res.status(500).send({ error: 'Internal server error' });
+    }
+});
+
+app.post('/add-enrollment', async (req, res) => {
+    try {
+        const studentId = String(req.body?.studentId ?? '').trim();
+        const courseId = String(req.body?.courseId ?? '').trim();
+
+        if (!studentId || !courseId) {
+            return res.status(400).send({ error: 'Student and course are required' });
+        }
+
+        const result = await queueEnrollmentMutation(async () => {
+            const [students, courses, enrollments] = await Promise.all([
+                loadStudents(),
+                loadCourses(),
+                loadEnrollments()
+            ]);
+            if (!students.some((student) => String(student.id).trim() === studentId)) {
+                return { status: 404, body: { error: 'Student not found' } };
+            }
+            if (!courses.some((course) => String(course.courseId).trim() === courseId)) {
+                return { status: 404, body: { error: 'Course not found' } };
+            }
+            if (enrollments.some((enrollment) =>
+                String(enrollment.studentId).trim() === studentId &&
+                String(enrollment.courseId).trim() === courseId
+            )) {
+                return { status: 409, body: { error: 'This student is already enrolled in the course' } };
+            }
+
+            const enrollment = { studentId, courseId };
+            enrollments.push(enrollment);
+            await saveEnrollments(enrollments);
+            return {
+                status: 201,
+                body: { message: 'Enrollment added successfully', enrollment }
+            };
+        });
+        res.status(result.status).send(result.body);
+    } catch (error) {
+        console.error('Error adding enrollment:', error);
+        res.status(500).send({ error: 'Internal server error' });
+    }
+});
+
+app.get(['/enrollments/:courseId', '/api/enrollments/:courseId'], async (req, res) => {
+    try {
+        const courseId = String(req.params.courseId).trim();
+        const courses = await loadCourses();
+        if (!courses.some((course) => String(course.courseId).trim() === courseId)) {
+            return res.status(404).send({ error: 'Course not found' });
+        }
+
+        const [students, enrollments] = await Promise.all([
+            loadStudents(),
+            loadEnrollments()
+        ]);
+        const enrolledStudentIds = new Set(
+            enrollments
+                .filter((enrollment) => String(enrollment.courseId).trim() === courseId)
+                .map((enrollment) => String(enrollment.studentId).trim())
+        );
+        const roster = students
+            .filter((student) => enrolledStudentIds.has(String(student.id).trim()))
+            .sort((a, b) => a.name.localeCompare(b.name));
+        res.send(roster);
+    } catch (error) {
+        console.error('Error listing course enrollments:', error);
         res.status(500).send({ error: 'Internal server error' });
     }
 });
