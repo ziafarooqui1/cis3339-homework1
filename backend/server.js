@@ -8,22 +8,40 @@ app.use(cors());
 app.use(express.json());
 
 const DATA_FILE = path.join(__dirname, 'students.json');
+const COURSES_FILE = path.join(__dirname, 'courses.json');
 let studentMutationQueue = Promise.resolve();
+let courseMutationQueue = Promise.resolve();
 
-function queueStudentMutation(mutation) {
-    const result = studentMutationQueue.then(mutation);
-    studentMutationQueue = result.catch(() => {});
+function queueMutation(queueGetter, queueSetter, mutation) {
+    const result = queueGetter().then(mutation);
+    queueSetter(result.catch(() => {}));
     return result;
 }
 
-async function loadStudents() {
+function queueStudentMutation(mutation) {
+    return queueMutation(
+        () => studentMutationQueue,
+        (queue) => { studentMutationQueue = queue; },
+        mutation
+    );
+}
+
+function queueCourseMutation(mutation) {
+    return queueMutation(
+        () => courseMutationQueue,
+        (queue) => { courseMutationQueue = queue; },
+        mutation
+    );
+}
+
+async function loadJsonArray(filePath, label) {
     try {
-        const data = await fs.promises.readFile(DATA_FILE, 'utf8');
-        const students = JSON.parse(data);
-        if (!Array.isArray(students)) {
-            throw new Error('Student data must be a JSON array');
+        const data = await fs.promises.readFile(filePath, 'utf8');
+        const records = JSON.parse(data);
+        if (!Array.isArray(records)) {
+            throw new Error(`${label} data must be a JSON array`);
         }
-        return students;
+        return records;
     } catch (error) {
         if (error.code === 'ENOENT') {
             return [];
@@ -32,16 +50,15 @@ async function loadStudents() {
     }
 }
 
-async function saveStudents(students) {
-    try {
-        await fs.promises.writeFile(DATA_FILE, JSON.stringify(students, null, 2), 'utf8');
-    } catch (error) {
-        console.error('Error writing students file:', error);
-        throw error;
-    }
+async function saveJsonArray(filePath, records) {
+    await fs.promises.writeFile(filePath, JSON.stringify(records, null, 2), 'utf8');
 }
 
-// Endpoint to search for a student by name
+const loadStudents = () => loadJsonArray(DATA_FILE, 'Student');
+const saveStudents = (students) => saveJsonArray(DATA_FILE, students);
+const loadCourses = () => loadJsonArray(COURSES_FILE, 'Course');
+const saveCourses = (courses) => saveJsonArray(COURSES_FILE, courses);
+
 app.post('/find-student', async (req, res) => {
     try {
         const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
@@ -62,7 +79,6 @@ app.post('/find-student', async (req, res) => {
     }
 });
 
-// Endpoint to save a student
 app.post('/add-student', async (req, res) => {
     try {
         const { name, id, phone, zip } = req.body || {};
@@ -82,8 +98,7 @@ app.post('/add-student', async (req, res) => {
         };
         const result = await queueStudentMutation(async () => {
             const students = await loadStudents();
-            const duplicateStudent = students.find((student) => String(student.id).trim() === newStudent.id);
-            if (duplicateStudent) {
+            if (students.some((student) => String(student.id).trim() === newStudent.id)) {
                 return { status: 409, body: { error: 'A student with this ID already exists' } };
             }
 
@@ -101,7 +116,6 @@ app.post('/add-student', async (req, res) => {
     }
 });
 
-// Delete by ID for an unambiguous match; name remains supported for existing clients.
 app.post('/delete-student', async (req, res) => {
     try {
         const { id, name } = req.body || {};
@@ -134,7 +148,84 @@ app.post('/delete-student', async (req, res) => {
     }
 });
 
-// Start the server
+app.get(['/courses', '/api/courses'], async (req, res) => {
+    try {
+        res.send(await loadCourses());
+    } catch (error) {
+        console.error('Error listing courses:', error);
+        res.status(500).send({ error: 'Internal server error' });
+    }
+});
+
+app.post('/add-course', async (req, res) => {
+    try {
+        const courseId = typeof req.body?.courseId === 'string'
+            ? req.body.courseId.trim()
+            : req.body?.courseId === undefined
+                ? ''
+                : String(req.body.courseId).trim();
+        const courseName = typeof req.body?.name === 'string'
+            ? req.body.name.trim()
+            : '';
+
+        if (!courseId || !courseName) {
+            return res.status(400).send({ error: 'Course ID and course name are required' });
+        }
+
+        const result = await queueCourseMutation(async () => {
+            const courses = await loadCourses();
+            if (courses.some((course) => String(course.courseId).trim() === courseId)) {
+                return { status: 409, body: { error: 'A course with this ID already exists' } };
+            }
+
+            const course = { courseId, name: courseName };
+            courses.push(course);
+            await saveCourses(courses);
+            return {
+                status: 201,
+                body: { message: 'Course added successfully', course }
+            };
+        });
+        res.status(result.status).send(result.body);
+    } catch (error) {
+        console.error('Error adding course:', error);
+        res.status(500).send({ error: 'Internal server error' });
+    }
+});
+
+app.post('/delete-course', async (req, res) => {
+    try {
+        const courseId = typeof req.body?.courseId === 'string'
+            ? req.body.courseId.trim()
+            : req.body?.courseId === undefined
+                ? ''
+                : String(req.body.courseId).trim();
+
+        if (!courseId) {
+            return res.status(400).send({ error: 'Course ID is required' });
+        }
+
+        const result = await queueCourseMutation(async () => {
+            const courses = await loadCourses();
+            const index = courses.findIndex((course) => String(course.courseId).trim() === courseId);
+            if (index === -1) {
+                return { status: 404, body: { error: 'Course not found' } };
+            }
+
+            const deletedCourse = courses.splice(index, 1)[0];
+            await saveCourses(courses);
+            return {
+                status: 200,
+                body: { message: 'Course deleted successfully', course: deletedCourse }
+            };
+        });
+        res.status(result.status).send(result.body);
+    } catch (error) {
+        console.error('Error deleting course:', error);
+        res.status(500).send({ error: 'Internal server error' });
+    }
+});
+
 const PORT = 3000;
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
