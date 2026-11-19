@@ -226,6 +226,14 @@ async function start() {
     Course.syncIndexes(),
     Enrollment.syncIndexes()
   ]);
+  await Promise.all([
+    Enrollment.deleteMany({
+      student: { $nin: await Student.distinct('_id') }
+    }),
+    Enrollment.deleteMany({
+      course: { $nin: await Course.distinct('_id') }
+    })
+  ]);
   const PORT = Number(process.env.PORT) || 3000;
   app.listen(PORT, () => {
     console.log(`MongoDB connected; server is running on http://localhost:${PORT}`);

@@ -7,4 +7,17 @@ const enrollmentSchema = new mongoose.Schema({
 
 enrollmentSchema.index({ student: 1, course: 1 }, { unique: true });
 
+enrollmentSchema.pre('save', async function () {
+  const [Student, Course] = [
+    mongoose.model('Student'),
+    mongoose.model('Course')
+  ];
+  const [studentExists, courseExists] = await Promise.all([
+    Student.exists({ _id: this.student }),
+    Course.exists({ _id: this.course })
+  ]);
+  if (!studentExists) throw new mongoose.Error.ValidationError(this);
+  if (!courseExists) throw new mongoose.Error.ValidationError(this);
+});
+
 module.exports = mongoose.model('Enrollment', enrollmentSchema);
