@@ -1,0 +1,14 @@
+{
+  "name": "cis3339-homework1",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace frontend",
+    "build": "npm run build --workspace frontend",
+    "start": "npm start --workspace backend"
+  }
+}

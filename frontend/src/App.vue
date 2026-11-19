@@ -1,0 +1,22 @@
+<script setup>
+import { RouterLink, RouterView } from 'vue-router';
+</script>
+
+<template>
+  <div class="app-shell">
+    <header class="app-header">
+      <a class="brand" href="/" aria-label="Student Management home">
+        <span class="brand-mark" aria-hidden="true">S</span>
+        <span>Student Management</span>
+      </a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <RouterLink to="/students">Students</RouterLink>
+        <RouterLink to="/courses">Courses</RouterLink>
+        <RouterLink to="/enrollments">Enrollments</RouterLink>
+      </nav>
+    </header>
+    <main class="page-content">
+      <RouterView />
+    </main>
+  </div>
+</template>
