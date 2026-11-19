@@ -89,7 +89,7 @@ export const useStudentsStore = defineStore('students', () => {
       const result = await request('/delete-student', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: student.value.name })
+        body: JSON.stringify({ id: student.value.id })
       });
       student.value = null;
       setNotice(result.message || 'Student deleted successfully.', 'success');
