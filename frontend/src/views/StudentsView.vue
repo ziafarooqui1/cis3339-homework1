@@ -35,6 +35,11 @@ const { student, notice, activeAction, hasStudent } = storeToRefs(studentsStore)
         </div>
       </div>
       <StudentSearchForm @search="studentsStore.searchStudent" />
+      <StudentResultCard
+        :student="hasStudent ? student : null"
+        :loading="activeAction === 'delete'"
+        @delete="studentsStore.deleteStudent"
+      />
     </section>
 
     <section class="view-card">
@@ -49,11 +54,5 @@ const { student, notice, activeAction, hasStudent } = storeToRefs(studentsStore)
         @add="studentsStore.addStudent"
       />
     </section>
-
-    <StudentResultCard
-      :student="hasStudent ? student : null"
-      :loading="activeAction === 'delete'"
-      @delete="studentsStore.deleteStudent"
-    />
   </div>
 </template>

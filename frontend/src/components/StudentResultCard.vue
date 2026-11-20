@@ -19,7 +19,7 @@ function requestDelete() {
 </script>
 
 <template>
-  <section class="result-panel" aria-labelledby="student-result-title">
+  <section class="result-panel search-result" aria-labelledby="student-result-title">
     <div class="section-heading">
       <div>
         <p class="eyebrow">Record</p>
