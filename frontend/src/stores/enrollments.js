@@ -28,7 +28,7 @@ export const useEnrollmentsStore = defineStore('enrollments', () => {
     loading.value = true;
     try {
       const [studentData, courseData] = await Promise.all([
-        request('/students'),
+        request('/api/students'),
         request('/api/courses')
       ]);
       students.value = studentData.sort((a, b) => a.name.localeCompare(b.name));

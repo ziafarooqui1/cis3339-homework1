@@ -55,7 +55,7 @@ app.get('/health', (req, res) => {
   });
 });
 
-app.get('/students', async (req, res) => {
+app.get('/api/students', async (req, res) => {
   try {
     const students = await Student.find().sort({ name: 1 });
     res.send(students.map(publicStudent));
@@ -126,7 +126,7 @@ app.post('/delete-student', async (req, res) => {
   }
 });
 
-app.get(['/courses', '/api/courses'], async (req, res) => {
+app.get('/api/courses', async (req, res) => {
   try {
     const courses = await Course.find().sort({ courseId: 1 });
     res.send(courses.map(publicCourse));
@@ -201,7 +201,7 @@ app.post('/add-enrollment', async (req, res) => {
   }
 });
 
-app.get(['/enrollments/:courseId', '/api/enrollments/:courseId'], async (req, res) => {
+app.get('/api/enrollments/:courseId', async (req, res) => {
   const courseId = String(req.params.courseId).trim();
   try {
     const course = await Course.findOne({ courseId });
@@ -217,6 +217,18 @@ app.get(['/enrollments/:courseId', '/api/enrollments/:courseId'], async (req, re
   } catch (error) {
     handleError(error, res, 'listing course enrollments');
   }
+});
+
+const frontendDist = path.resolve(__dirname, '..', 'frontend', 'dist');
+app.use(express.static(frontendDist));
+app.use((req, res) => {
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).send({ error: 'API route not found' });
+  }
+  if (req.method !== 'GET') {
+    return res.status(404).send({ error: 'Route not found' });
+  }
+  res.sendFile(path.join(frontendDist, 'index.html'));
 });
 
 async function start() {

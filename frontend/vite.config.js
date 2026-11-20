@@ -13,7 +13,7 @@ export default defineConfig({
       '/api/courses': 'http://localhost:3000',
       '/add-course': 'http://localhost:3000',
       '/delete-course': 'http://localhost:3000',
-      '/students': 'http://localhost:3000',
+      '/api/students': 'http://localhost:3000',
       '/add-enrollment': 'http://localhost:3000',
       '/api/enrollments': 'http://localhost:3000'
     }

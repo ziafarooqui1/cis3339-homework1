@@ -9,7 +9,8 @@ const router = createRouter({
     { path: '/', redirect: '/students' },
     { path: '/students', component: StudentsView },
     { path: '/courses', component: CoursesView },
-    { path: '/enrollments', component: EnrollmentsView }
+    { path: '/enrollments', component: EnrollmentsView },
+    { path: '/:pathMatch(.*)*', redirect: '/students' }
   ]
 });
 
