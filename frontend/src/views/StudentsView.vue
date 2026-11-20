@@ -34,7 +34,10 @@ const { student, notice, activeAction, hasStudent } = storeToRefs(studentsStore)
           <h2>Search students</h2>
         </div>
       </div>
-      <StudentSearchForm @search="studentsStore.searchStudent" />
+      <StudentSearchForm
+        :loading="activeAction === 'search'"
+        @search="studentsStore.searchStudent"
+      />
       <StudentResultCard
         :student="hasStudent ? student : null"
         :loading="activeAction === 'delete'"

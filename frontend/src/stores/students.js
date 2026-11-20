@@ -13,13 +13,28 @@ async function request(path, options) {
 }
 
 export const useStudentsStore = defineStore('students', () => {
+  const students = ref([]);
   const student = ref(null);
   const notice = ref(null);
   const activeAction = ref(null);
+  const loadingStudents = ref(false);
   const hasStudent = computed(() => student.value !== null);
 
   function setNotice(message, type) {
     notice.value = { message, type };
+  }
+
+  async function loadStudents() {
+    loadingStudents.value = true;
+    try {
+      students.value = await request('/api/students');
+      return true;
+    } catch (error) {
+      setNotice(error.message, 'error');
+      return false;
+    } finally {
+      loadingStudents.value = false;
+    }
   }
 
   async function searchStudent(name) {
@@ -69,6 +84,10 @@ export const useStudentsStore = defineStore('students', () => {
         body: JSON.stringify(values)
       });
       student.value = result.student;
+      students.value = [
+        ...students.value.filter((existing) => existing.id !== result.student.id),
+        result.student
+      ].sort((a, b) => a.name.localeCompare(b.name));
       setNotice(result.message || 'Student added successfully.', 'success');
     } catch (error) {
       setNotice(error.message, 'error');
@@ -92,6 +111,7 @@ export const useStudentsStore = defineStore('students', () => {
         body: JSON.stringify({ id: student.value.id })
       });
       student.value = null;
+      students.value = students.value.filter((existing) => existing.id !== result.student.id);
       setNotice(result.message || 'Student deleted successfully.', 'success');
     } catch (error) {
       setNotice(error.message, 'error');
@@ -101,10 +121,13 @@ export const useStudentsStore = defineStore('students', () => {
   }
 
   return {
+    students,
     student,
     notice,
     activeAction,
+    loadingStudents,
     hasStudent,
+    loadStudents,
     searchStudent,
     addStudent,
     deleteStudent

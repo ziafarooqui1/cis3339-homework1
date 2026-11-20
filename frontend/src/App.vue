@@ -5,7 +5,7 @@ import { RouterLink, RouterView } from 'vue-router';
 <template>
   <div class="app-shell">
     <aside class="sidebar">
-      <RouterLink class="brand" to="/students" aria-label="Student Management home">
+      <RouterLink class="brand" to="/students" aria-label="Student Management System home">
         <span class="brand-mark" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none">
             <path d="M4 19V8.5L12 4l8 4.5V19M8 19v-5h8v5M9 9h.01M15 9h.01" />

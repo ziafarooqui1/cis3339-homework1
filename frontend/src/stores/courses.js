@@ -28,8 +28,10 @@ export const useCoursesStore = defineStore('courses', () => {
     notice.value = null;
     try {
       courses.value = await request('/api/courses');
+      return true;
     } catch (error) {
       setNotice(error.message, 'error');
+      return false;
     } finally {
       loading.value = false;
     }

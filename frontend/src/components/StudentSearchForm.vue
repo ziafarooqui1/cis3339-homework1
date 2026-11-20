@@ -1,6 +1,12 @@
 <script setup>
 import { ref } from 'vue';
 
+const props = defineProps({
+  loading: {
+    type: Boolean,
+    default: false
+  }
+});
 const emit = defineEmits(['search']);
 const name = ref('');
 
@@ -21,7 +27,9 @@ function submitSearch() {
         placeholder="Search by exact name"
         required
       />
-      <button class="button button-secondary" type="submit">Search</button>
+      <button class="button button-secondary" type="submit" :disabled="props.loading">
+        {{ props.loading ? 'Searching…' : 'Search' }}
+      </button>
     </div>
   </form>
 </template>

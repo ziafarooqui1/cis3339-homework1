@@ -1,5 +1,7 @@
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
+import { useStudentsStore } from './students';
+import { useCoursesStore } from './courses';
 
 async function request(path, options) {
   const response = await fetch(path, options);
@@ -11,8 +13,10 @@ async function request(path, options) {
 }
 
 export const useEnrollmentsStore = defineStore('enrollments', () => {
-  const students = ref([]);
-  const courses = ref([]);
+  const studentsStore = useStudentsStore();
+  const coursesStore = useCoursesStore();
+  const students = computed(() => studentsStore.students);
+  const courses = computed(() => coursesStore.courses);
   const roster = ref([]);
   const selectedStudentId = ref('');
   const selectedCourseId = ref('');
@@ -26,13 +30,17 @@ export const useEnrollmentsStore = defineStore('enrollments', () => {
 
   async function loadSelections() {
     loading.value = true;
+    notice.value = null;
     try {
-      const [studentData, courseData] = await Promise.all([
-        request('/api/students'),
-        request('/api/courses')
+      const [studentsLoaded, coursesLoaded] = await Promise.all([
+        studentsStore.loadStudents(),
+        coursesStore.loadCourses()
       ]);
-      students.value = studentData.sort((a, b) => a.name.localeCompare(b.name));
-      courses.value = courseData.sort((a, b) => a.courseId.localeCompare(b.courseId));
+      if (!studentsLoaded) {
+        setNotice(studentsStore.notice?.message || 'Could not load students.', 'error');
+      } else if (!coursesLoaded) {
+        setNotice(coursesStore.notice?.message || 'Could not load courses.', 'error');
+      }
     } catch (error) {
       setNotice(error.message, 'error');
     } finally {

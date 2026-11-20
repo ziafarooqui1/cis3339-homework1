@@ -8,7 +8,16 @@ The repository uses npm workspaces to install frontend and backend dependencies 
 - MongoDB Community Edition running locally
 - A modern web browser
 
-The root `.env` file configures MongoDB with `MONGODB_URI=mongodb://127.0.0.1:27017/cis3339_homework1` and the backend port with `PORT=3000`. Start the local MongoDB Community Edition service before starting the application.
+The tracked root `.env` file configures MongoDB with `MONGODB_URI=mongodb://127.0.0.1:27017/cis3339_homework1` and the backend port with `PORT=3000`. No cloud credentials are required.
+
+On Windows, start the MongoDB Community Edition service from an elevated PowerShell terminal:
+
+```powershell
+Start-Service MongoDB
+Get-Service MongoDB
+```
+
+Confirm that the service status is `Running` before starting the app. If MongoDB was installed without a Windows service, start `mongod` using the data directory configured for that installation.
 
 ## Install
 
@@ -32,7 +41,7 @@ In a second terminal, start the backend:
 npm start --workspace backend
 ```
 
-Open the Vite development URL shown in the first terminal (normally `http://localhost:5173`). The frontend development server proxies the existing student API requests to the backend at `http://localhost:3000`.
+Open the Vite development URL shown in the first terminal (normally `http://localhost:5173`). The frontend development server proxies API requests to the backend at `http://localhost:3000`.
 
 The Vue development server provides the student, course, and enrollment views and proxies API requests to the backend.
 
@@ -41,7 +50,6 @@ The Vue development server provides the student, course, and enrollment views an
 From the project root, build the Vue frontend and start the Express server:
 
 ```bash
-npm install
 npm run build
 npm start
 ```

@@ -32,11 +32,14 @@ function publicCourse(course) {
 
 function handleError(error, res, operation) {
   if (error?.code === 11000) {
-    const field = error.keyPattern?.id ? 'student ID'
-      : error.keyPattern?.courseId ? 'course ID'
-        : error.keyPattern?.student || error.keyPattern?.course ? 'student-course pair'
-          : 'record';
-    return res.status(409).send({ error: `A duplicate ${field} already exists` });
+    const message = error.keyPattern?.id
+      ? 'A student with this ID already exists'
+      : error.keyPattern?.courseId
+        ? 'A course with this ID already exists'
+        : error.keyPattern?.student || error.keyPattern?.course
+          ? 'This student is already enrolled in the course'
+          : 'A duplicate record already exists';
+    return res.status(409).send({ error: message });
   }
 
   if (error instanceof mongoose.Error.ValidationError) {
